@@ -283,6 +283,8 @@ typedef struct{
   uint8_t routeIDAC2;
 } ADS122C04_initParam;
 
+void twi_init(void);
+
 //By default use the default I2C address, and use Wire port
 bool ads_begin(uint8_t deviceAddress); //Returns true if module is detected
 

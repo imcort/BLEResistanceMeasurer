@@ -43,10 +43,50 @@
 #include "nrf_delay.h"
 #include "math.h"
 
+//TWI
+#include "nrf_drv_twi.h"
+#include "nrf_pwr_mgmt.h"
+
+static uint8_t iic_sendbuf[20];
+static uint8_t iic_recvbuf[20];
+
+static volatile bool m_xfer_done = false;
+static const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(0);
+
+void twi_handler(nrf_drv_twi_evt_t const *p_event, void *p_context)
+{
+	switch (p_event->type)
+	{
+		case NRF_DRV_TWI_EVT_DONE:
+			m_xfer_done = true;
+			break;
+		default:
+			break;
+	}
+}
+
+void twi_init(void)
+{
+	ret_code_t err_code;
+
+	const nrf_drv_twi_config_t twi_afe_config = {
+		.scl = 5,
+		.sda = 6,
+		.frequency = NRF_DRV_TWI_FREQ_100K,
+		.interrupt_priority = APP_IRQ_PRIORITY_HIGH,
+		.clear_bus_init = false
+	};
+
+	err_code = nrf_drv_twi_init(&m_twi, &twi_afe_config, twi_handler, NULL);
+	APP_ERROR_CHECK(err_code);
+
+	nrf_drv_twi_enable(&m_twi);
+}
+
 //Private Variables
 uint8_t _deviceAddress; //Keeps track of I2C address. setI2CAddress changes this.
 
-bool _printDebug = false; //Flag to print debugging variables
+bool _printDebug = true; //Flag to print debugging variables
 
 // Keep a copy of the wire mode so we can restore it after reading the internal temperature
 uint8_t _wireMode = ADS122C04_4WIRE_MODE;
@@ -881,48 +921,49 @@ bool ADS122C04_writeReg(uint8_t reg, uint8_t writeValue)
 
 bool ADS122C04_readReg(uint8_t reg, uint8_t *readValue)
 {
-  uint8_t command = 0;
-  command = ADS122C04_READ_CMD(reg);
+  ret_code_t err_code;
+	iic_sendbuf[0] = ADS122C04_READ_CMD(reg);
 
-//  _i2cPort->beginTransmission((uint8_t)_deviceAddress);
-//  _i2cPort->write(command);
-
-//  if (_i2cPort->endTransmission(false) != 0)    //Do not release bus
-//  {
-//    if (_printDebug == true)
-//    {
-//      NRF_LOG_INFO("ADS122C04_readReg: sensor did not ACK");
-//    }
-//  return (false); //Sensor did not ACK
-//  }
-
-//  _i2cPort->requestFrom((uint8_t)_deviceAddress, (uint8_t)1); // Request one byte
-//  if (_i2cPort->available() >= 1)
-//  {
-//    *readValue = _i2cPort->read();
-//    return(true);
-//  }
-
-  if (_printDebug == true)
-  {
-    NRF_LOG_INFO("ADS122C04_readReg: requestFrom returned no data");
-  }
-  return(false);
+	m_xfer_done = false;
+	err_code = nrf_drv_twi_tx(&m_twi, _deviceAddress, iic_sendbuf, 1, true);
+	APP_ERROR_CHECK(err_code);
+	while (m_xfer_done == false) nrf_pwr_mgmt_run();
+	
+	m_xfer_done = false;
+	err_code = nrf_drv_twi_rx(&m_twi, _deviceAddress, iic_recvbuf, 1);
+	APP_ERROR_CHECK(err_code);
+	while (m_xfer_done == false) nrf_pwr_mgmt_run();
+	
+	*readValue = iic_recvbuf[0];
+		
+  return(true);
 }
 
 bool ADS122C04_sendCommand(uint8_t command)
 {
-//  _i2cPort->beginTransmission((uint8_t)_deviceAddress);
-//  _i2cPort->write(command);
-//  return (_i2cPort->endTransmission() == 0);
+  ret_code_t err_code;
+	iic_sendbuf[0] = command;
+
+	m_xfer_done = false;
+	err_code = nrf_drv_twi_tx(&m_twi, _deviceAddress, iic_sendbuf, 1, true);
+	APP_ERROR_CHECK(err_code);
+	while (m_xfer_done == false) nrf_pwr_mgmt_run();
+	
+	return(true);
 }
 
 bool ADS122C04_sendCommandWithValue(uint8_t command, uint8_t value)
 {
-//  _i2cPort->beginTransmission((uint8_t)_deviceAddress);
-//  _i2cPort->write(command);
-//  _i2cPort->write(value);
-//  return (_i2cPort->endTransmission() == 0);
+  ret_code_t err_code;
+	iic_sendbuf[0] = command;
+	iic_sendbuf[1] = value;
+
+	m_xfer_done = false;
+	err_code = nrf_drv_twi_tx(&m_twi, _deviceAddress, iic_sendbuf, 2, true);
+	APP_ERROR_CHECK(err_code);
+	while (m_xfer_done == false) nrf_pwr_mgmt_run();
+	
+	return(true);
 }
 
 // Read the conversion result with count byte.
@@ -932,61 +973,22 @@ bool ADS122C04_sendCommandWithValue(uint8_t command, uint8_t value)
 // Higher functions will need to take care of converting it to (e.g.) float or int32_t.
 bool ADS122C04_getConversionDataWithCount(uint32_t *conversionData, uint8_t *count)
 {
-  uint8_t RXByte[4] = {0};
+	ret_code_t err_code;
+	iic_sendbuf[0] = ADS122C04_RDATA_CMD;
 
-//  _i2cPort->beginTransmission((uint8_t)_deviceAddress);
-//  _i2cPort->write(ADS122C04_RDATA_CMD);
+	m_xfer_done = false;
+	err_code = nrf_drv_twi_tx(&m_twi, _deviceAddress, iic_sendbuf, 1, true);
+	APP_ERROR_CHECK(err_code);
+	while (m_xfer_done == false) nrf_pwr_mgmt_run();
+	
+	m_xfer_done = false;
+	err_code = nrf_drv_twi_rx(&m_twi, _deviceAddress, iic_recvbuf, 4);
+	APP_ERROR_CHECK(err_code);
+	while (m_xfer_done == false) nrf_pwr_mgmt_run();
 
-//  if (_i2cPort->endTransmission(false) != 0)    //Do not release bus
-//  {
-//    if (_printDebug == true)
-//    {
-//      NRF_LOG_INFO("ADS122C04_getConversionDataWithCount: sensor did not ACK");
-//    }
-//    return(false); //Sensor did not ACK
-//  }
-
-//  // Note: the next line will need to be changed if data integrity is enabled.
-//  //       The code will need to request 6 bytes for CRC or 7 bytes for inverted data.
-//  _i2cPort->requestFrom((uint8_t)_deviceAddress, (uint8_t)4); // Request four bytes
-
-//  if (_printDebug == true)
-//  {
-//    if (_i2cPort->available() == 3)
-//    {
-//      NRF_LOG_INFO("ADS122C04_getConversionDataWithCount: only 3 bytes available. Maybe DCNT is disabled?");
-//    }
-//  }
-
-//  if (_i2cPort->available() >= 4)
-//  {
-//    RXByte[0] = _i2cPort->read(); // Count
-//    RXByte[1] = _i2cPort->read(); // MSB
-//    RXByte[2] = _i2cPort->read();
-//    RXByte[3] = _i2cPort->read(); // LSB
-//    if (_i2cPort->available() > 0)// Note: this _should_ be redundant
-//    {
-//      if (_printDebug == true)
-//      {
-//        NRF_LOG_INFO("ADS122C04_getConversionDataWithCount: excess bytes available. Maybe data integrity is enabled?");
-//      }
-//      while (_i2cPort->available() > 0)
-//      {
-//        _i2cPort->read(); // Read and ignore excess bytes (presumably inverted data or CRC)
-//      }
-//    }
-//  }
-//  else
-//  {
-//    if (_printDebug == true)
-//    {
-//      NRF_LOG_INFO("ADS122C04_getConversionDataWithCount: requestFrom failed");
-//    }
-//    return(false);
-//  }
-
-  *count = RXByte[0];
-  *conversionData = ((uint32_t)RXByte[3]) | ((uint32_t)RXByte[2]<<8) | ((uint32_t)RXByte[1]<<16);
+  *count = iic_recvbuf[0];
+  *conversionData = ((uint32_t)iic_recvbuf[3]) | ((uint32_t)iic_recvbuf[2]<<8) | ((uint32_t)iic_recvbuf[1]<<16);
+	
   return(true);
 }
 
@@ -997,50 +999,19 @@ bool ADS122C04_getConversionDataWithCount(uint32_t *conversionData, uint8_t *cou
 // Higher functions will need to take care of converting it to (e.g.) float or int32_t.
 bool ADS122C04_getConversionData(uint32_t *conversionData)
 {
-  uint8_t RXByte[3] = {0};
+  ret_code_t err_code;
+	iic_sendbuf[0] = ADS122C04_RDATA_CMD;
 
-//  _i2cPort->beginTransmission((uint8_t)_deviceAddress);
-//  _i2cPort->write(ADS122C04_RDATA_CMD);
+	m_xfer_done = false;
+	err_code = nrf_drv_twi_tx(&m_twi, _deviceAddress, iic_sendbuf, 1, true);
+	APP_ERROR_CHECK(err_code);
+	while (m_xfer_done == false) nrf_pwr_mgmt_run();
+	
+	m_xfer_done = false;
+	err_code = nrf_drv_twi_rx(&m_twi, _deviceAddress, iic_recvbuf, 3);
+	APP_ERROR_CHECK(err_code);
+	while (m_xfer_done == false) nrf_pwr_mgmt_run();
 
-//  if (_i2cPort->endTransmission(false) != 0)    //Do not release bus
-//  {
-//    if (_printDebug == true)
-//    {
-//      NRF_LOG_INFO("ADS122C04_getConversionData: sensor did not ACK");
-//    }
-//    return(false); //Sensor did not ACK
-//  }
-
-//  // Note: the next line will need to be changed if data integrity is enabled.
-//  //       The code will need to request 5 bytes for CRC or 6 bytes for inverted data.
-//  _i2cPort->requestFrom((uint8_t)_deviceAddress, (uint8_t)3); // Request three bytes
-
-//  if (_i2cPort->available() >= 3)
-//  {
-//    RXByte[0] = _i2cPort->read(); // MSB
-//    RXByte[1] = _i2cPort->read();
-//    RXByte[2] = _i2cPort->read(); // LSB
-//    if (_i2cPort->available() > 0) // Note: this _should_ be redundant
-//    {
-//      if (_printDebug == true)
-//      {
-//        NRF_LOG_INFO("ADS122C04_getConversionData: excess bytes available. Maybe data integrity is enabled?");
-//      }
-//      while (_i2cPort->available() > 0)
-//      {
-//        _i2cPort->read(); // Read and ignore excess bytes (presumably inverted data or CRC)
-//      }
-//    }
-//  }
-//  else
-//  {
-//    if (_printDebug == true)
-//    {
-//      NRF_LOG_INFO("ADS122C04_getConversionData: requestFrom failed");
-//    }
-//    return(false);
-//  }
-
-  *conversionData = ((uint32_t)RXByte[2]) | ((uint32_t)RXByte[1]<<8) | ((uint32_t)RXByte[0]<<16);
+  *conversionData = ((uint32_t)iic_recvbuf[2]) | ((uint32_t)iic_recvbuf[1]<<8) | ((uint32_t)iic_recvbuf[0]<<16);
   return(true);
 }

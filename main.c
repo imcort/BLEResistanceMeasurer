@@ -68,6 +68,8 @@
 #include "bsp_btn_ble.h"
 #include "nrf_pwr_mgmt.h"
 
+#include "ADS122C04.h"
+
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
@@ -79,7 +81,7 @@
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 
-#define APP_ADV_INTERVAL                64                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
+#define APP_ADV_INTERVAL                1000                                        /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
 
 #define APP_ADV_DURATION                18000                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 
@@ -603,6 +605,13 @@ int main(void)
 
     // Start execution.
     NRF_LOG_INFO("Debug logging for UART over RTT started.");
+		
+		twi_init();
+		nrf_gpio_cfg_output(15);
+		nrf_gpio_pin_set(15);
+		ads_begin(0x40);
+		ads_printADS122C04config();
+	
     advertising_start();
 
     // Enter main loop.
