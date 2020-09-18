@@ -393,6 +393,11 @@
               <FileType>5</FileType>
               <FilePath>..\config\sdk_config.h</FilePath>
             </File>
+            <File>
+              <FileName>ADS122C04.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\ADS122C04.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -3755,6 +3760,11 @@
               <FileName>sdk_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\config\sdk_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>ADS122C04.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\ADS122C04.c</FilePath>
             </File>
           </Files>
         </Group>
