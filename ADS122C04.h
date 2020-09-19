@@ -349,4 +349,6 @@ uint8_t ads_getIDAC2mux(void); // Get the IDAC2 mux configuration
 // Print the ADS122C04 configuration (but only if enableDebugging has been called)
 void ads_printADS122C04config(void);
 
+bool ADS122C04_init(ADS122C04_initParam *param); // initialise the ADS122C04 with these parameters
+
 #endif

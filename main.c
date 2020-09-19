@@ -83,7 +83,7 @@
 
 #define APP_ADV_INTERVAL                1000                                        /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
 
-#define APP_ADV_DURATION                18000                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
+#define APP_ADV_DURATION                0                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(75, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
@@ -107,6 +107,18 @@ static ble_uuid_t m_adv_uuids[]          =                                      
     {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 };
 
+APP_TIMER_DEF(acq_timer);
+
+char sendbuf[200];
+uint16_t llength;
+
+static void m_acq_timer_handler(void *p_context)
+{
+
+	llength = sprintf(sendbuf,"rawv: %d", ads_readRawVoltage());
+	ble_nus_data_send(&m_nus, (uint8_t *)sendbuf, &llength, m_conn_handle);
+	
+}
 
 /**@brief Function for assert macro callback.
  *
@@ -129,6 +141,9 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 static void timers_init(void)
 {
     ret_code_t err_code = app_timer_init();
+    APP_ERROR_CHECK(err_code);
+	
+		err_code = app_timer_create(&acq_timer, APP_TIMER_MODE_REPEATED, m_acq_timer_handler);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -348,6 +363,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     {
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected");
+						err_code = app_timer_start(acq_timer, APP_TIMER_TICKS(50), NULL);
+						APP_ERROR_CHECK(err_code);
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
@@ -507,7 +524,7 @@ static void advertising_init(void)
 
     init.advdata.name_type          = BLE_ADVDATA_FULL_NAME;
     init.advdata.include_appearance = false;
-    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+    init.advdata.flags              = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
     init.srdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     init.srdata.uuids_complete.p_uuids  = m_adv_uuids;
@@ -610,7 +627,28 @@ int main(void)
 		nrf_gpio_cfg_output(15);
 		nrf_gpio_pin_set(15);
 		ads_begin(0x40);
-		ads_printADS122C04config();
+		
+//		ADS122C04_initParam initParams;
+//		initParams.inputMux = ADS122C04_MUX_AIN1_AIN0; // Route AIN1 to AINP and AIN0 to AINN
+//    initParams.gainLevel = ADS122C04_GAIN_4; // Set the gain to 4
+//    initParams.pgaBypass = ADS122C04_PGA_ENABLED; // Enable the PGA
+//    initParams.dataRate = ADS122C04_DATA_RATE_20SPS; // Set the data rate (samples per second) to 20
+//    initParams.opMode = ADS122C04_OP_MODE_NORMAL; // Disable turbo mode
+//    initParams.convMode = ADS122C04_CONVERSION_MODE_SINGLE_SHOT; // Use single shot mode
+//    initParams.selectVref = ADS122C04_VREF_EXT_REF_PINS; // Use the external REF pins
+//    initParams.tempSensorEn = ADS122C04_TEMP_SENSOR_OFF; // Disable the temperature sensor
+//    initParams.dataCounterEn = ADS122C04_DCNT_DISABLE; // Disable the data counter
+//    initParams.dataCRCen = ADS122C04_CRC_DISABLED; // Disable CRC checking
+//    initParams.burnOutEn = ADS122C04_BURN_OUT_CURRENT_OFF; // Disable the burn-out current
+//    initParams.idacCurrent = ADS122C04_IDAC_CURRENT_500_UA; // Set the IDAC current to 0.5mA
+//    initParams.routeIDAC1 = ADS122C04_IDAC1_REFP; // Route IDAC1 to AIN2
+//    initParams.routeIDAC2 = ADS122C04_IDAC2_DISABLED; // Route IDAC2 to AIN3
+//		ADS122C04_init(&initParams);
+		
+		NRF_LOG_INFO("Debug logging for UART over RTT started.%d", ads_powerdown());
+		
+		;
+		NRF_LOG_INFO("Debug logging for UART over RTT started.");
 	
     advertising_start();
 

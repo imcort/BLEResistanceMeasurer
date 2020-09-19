@@ -105,8 +105,6 @@ const float TEMPERATURE_SENSOR_RESOLUTION = 0.03125;
 
 ADS122C04Reg_t ADS122C04_Reg; // Global to hold copies of all four configuration registers
 
-bool ADS122C04_init(ADS122C04_initParam *param); // initialise the ADS122C04 with these parameters
-
 bool ADS122C04_writeReg(uint8_t reg, uint8_t writeValue); // write a value to the selected register
 bool ADS122C04_readReg(uint8_t reg, uint8_t *readValue); // read a value from the selected register (returned in readValue)
 
@@ -406,14 +404,14 @@ int32_t ads_readRawVoltage(void)
 
   // Configure the ADS122C04 for raw mode
   // Disable the IDAC, use the internal 2.048V reference and set the gain to 1
-  if ((ads_configureADCmode(ADS122C04_RAW_MODE)) == false)
-  {
-    if (_printDebug == true)
-    {
-      NRF_LOG_INFO("readRawVoltage: configureADCmode (1) failed");
-    }
-    return(0);
-  }
+//  if ((ads_configureADCmode(ADS122C04_RAW_MODE)) == false)
+//  {
+//    if (_printDebug == true)
+//    {
+//      NRF_LOG_INFO("readRawVoltage: configureADCmode (1) failed");
+//    }
+//    return(0);
+//  }
 
   // Start the conversion (assumes we are using single shot mode)
   ads_start();
@@ -425,16 +423,16 @@ int32_t ads_readRawVoltage(void)
     drdy = ads_checkDataReady();
   }
 
-  // Check if we timed out
-  if (drdy == false)
-  {
-    if (_printDebug == true)
-    {
-      NRF_LOG_INFO("readRawVoltage: checkDataReady timed out");
-    }
-    ads_configureADCmode(previousWireMode); // Attempt to restore the previous wire mode
-    return(0);
-  }
+//  // Check if we timed out
+//  if (drdy == false)
+//  {
+//    if (_printDebug == true)
+//    {
+//      NRF_LOG_INFO("readRawVoltage: checkDataReady timed out");
+//    }
+//    ads_configureADCmode(previousWireMode); // Attempt to restore the previous wire mode
+//    return(0);
+//  }
 
   // Read the conversion result
   if(ADS122C04_getConversionData(&raw_v.UINT32) == false)
@@ -443,19 +441,19 @@ int32_t ads_readRawVoltage(void)
     {
       NRF_LOG_INFO("readRawVoltage: ADS122C04_getConversionData failed");
     }
-    ads_configureADCmode(previousWireMode); // Attempt to restore the previous wire mode
+    //ads_configureADCmode(previousWireMode); // Attempt to restore the previous wire mode
     return(0);
   }
 
-  // Restore the previous wire mode
-  if ((ads_configureADCmode(previousWireMode)) == false)
-  {
-  if (_printDebug == true)
-    {
-      NRF_LOG_INFO("readRawVoltage: configureADCmode (2) failed");
-    }
-    return(0);
-  }
+//  // Restore the previous wire mode
+//  if ((ads_configureADCmode(previousWireMode)) == false)
+//  {
+//  if (_printDebug == true)
+//    {
+//      NRF_LOG_INFO("readRawVoltage: configureADCmode (2) failed");
+//    }
+//    return(0);
+//  }
 
   // The raw voltage is in the bottom 24 bits of raw_temp
   // If we just do a <<8 we will multiply the result by 256
