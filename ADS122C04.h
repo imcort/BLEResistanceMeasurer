@@ -48,14 +48,12 @@
 #define ADS122C04_CONVERSION_TIMEOUT 75
 
 // Define 2/3/4-Wire, Temperature and Raw modes
-#define ADS122C04_4WIRE_MODE         0x0
-#define ADS122C04_3WIRE_MODE         0x1
-#define ADS122C04_2WIRE_MODE         0x2
-#define ADS122C04_TEMPERATURE_MODE   0x3
-#define ADS122C04_RAW_MODE           0x4
-#define ADS122C04_4WIRE_HI_TEMP      0x5
-#define ADS122C04_3WIRE_HI_TEMP      0x6
-#define ADS122C04_2WIRE_HI_TEMP      0x7
+#define ADS122C04_4WIRE_CH1_MODE         0x0
+#define ADS122C04_4WIRE_CH2_MODE         0x1
+#define ADS122C04_TEMPERATURE_MODE       0x2
+#define ADS122C04_RAW_MODE   						 0x3
+#define ADS122C04_4WIRE_CH1_HGAIN        0x4
+#define ADS122C04_4WIRE_CH2_HGAIN      	 0x5
 
 // ADS122C04 Table 16 in Datasheet
 #define ADS122C04_RESET_CMD          0x06     //0000 011x      Reset
@@ -288,30 +286,15 @@ void twi_init(void);
 //By default use the default I2C address, and use Wire port
 bool ads_begin(uint8_t deviceAddress); //Returns true if module is detected
 
-//Returns true if device answers on _deviceAddress
-bool ads_isConnected(void);
-
-float ads_readPT100Centigrade(void); // Read the PT100 temperature in Centigrade
-float ads_readPT100Fahrenheit(void); // Read the PT100 temperature in Fahrenheit
-
 // Read the raw signed 24-bit ADC value as int32_t
 // This uses the internal 2.048V reference with the gain set to 1
 // The LSB is 2.048 / 2^23 = 0.24414 uV (0.24414 microvolts)
-int32_t ads_readRawVoltage(void);
-
-// Read the raw signed 24-bit ADC value as uint32_t
-// The ADC data is returned in the least-significant 24-bits
-uint32_t ads_readADC(void);
-
-// Read the internal temperature (C)
-float ads_readInternalTemperature(void);
+float ads_readRawVoltage(void);
+float ads_readResistance(float gain);
 
 bool ads_reset(void); // Reset the ADS122C04
 bool ads_start(void); // Start a conversion
 bool ads_powerdown(void); // Put the chip into low power mode
-
-// Default to using 'safe' settings (disable the IDAC current sources)
-bool ads_configureADCmode(uint8_t wire_mode); // Configure the chip for the chosen mode
 
 // Default to using 'safe' settings (disable the IDAC current sources)
 bool ads_setInputMultiplexer(uint8_t mux_config); // Configure the input multiplexer
@@ -330,21 +313,6 @@ bool ads_setIDAC1mux(uint8_t setting); // Configure the IDAC1 routing
 bool ads_setIDAC2mux(uint8_t setting); // Configure the IDAC2 routing
 
 bool ads_checkDataReady(void); // Check the status of the DRDY bit in Config Register 2
-
-uint8_t ads_getInputMultiplexer(void); // Get the input multiplexer configuration
-uint8_t ads_getGain(void); // Get the gain setting
-uint8_t ads_getPGAstatus(void); // Get the Programmable Gain Amplifier status
-uint8_t ads_getDataRate(void); // Get the data rate (sample speed)
-uint8_t ads_getOperatingMode(void); // Get the operating mode (normal / turbo)
-uint8_t ads_getConversionMode(void); // Get the conversion mode (single-shot / continuous)
-uint8_t ads_getVoltageReference(void); // Get the voltage reference configuration
-uint8_t ads_getInternalTempSensorStatus(void); // Get the internal temperature sensor status
-uint8_t ads_getDataCounter(void); // Get the data counter status
-uint8_t ads_getDataIntegrityCheck(void); // Get the data integrity check configuration
-uint8_t ads_getBurnOutCurrent(void); // Get the burn-out current status
-uint8_t ads_getIDACcurrent(void); // Get the IDAC setting
-uint8_t ads_getIDAC1mux(void); // Get the IDAC1 mux configuration
-uint8_t ads_getIDAC2mux(void); // Get the IDAC2 mux configuration
 
 // Print the ADS122C04 configuration (but only if enableDebugging has been called)
 void ads_printADS122C04config(void);
