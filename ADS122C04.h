@@ -319,4 +319,6 @@ void ads_printADS122C04config(void);
 
 bool ADS122C04_init(ADS122C04_initParam *param); // initialise the ADS122C04 with these parameters
 
+bool ADS122C04_getConversionData(uint32_t *conversionData);
+
 #endif

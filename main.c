@@ -112,24 +112,30 @@ APP_TIMER_DEF(acq_timer);
 char sendbuf[200];
 uint16_t llength;
 
-bool chnsel = true;
 float chn1 = 0;
-float chn2 = 0;
 
 static void m_acq_timer_handler(void *p_context)
 {
-	if(chnsel){
-		ads_setInputMultiplexer(ADS122C04_MUX_AIN0_AIN1);
-		chn1 = ads_readResistance(1.0f);
-	} else {
-		ads_setInputMultiplexer(ADS122C04_MUX_AIN2_AIN3);
-		chn2 = ads_readResistance(1.0f);
-		
-		llength = sprintf(sendbuf,"%.3f,%.3f\r\n", chn1, chn2);
-		ble_nus_data_send(&m_nus, (uint8_t *)sendbuf, &llength, m_conn_handle);
-	}
-	chnsel = !chnsel;
+//	if(chnsel){
+//		ads_setInputMultiplexer(ADS122C04_MUX_AIN0_AIN1);
+//		chn1 = ads_readResistance(1.0f);
+//	} else {
+//		ads_setInputMultiplexer(ADS122C04_MUX_AIN2_AIN3);
+//		chn2 = ads_readResistance(1.0f);
+//		
+//		
+//	}
+//	chnsel = !chnsel;
+		union raw_voltage_union raw_v;
+		chn1 = ADS122C04_getConversionData(&raw_v.UINT32);
 	
+		if ((raw_v.UINT32 & 0x00800000) == 0x00800000)
+			raw_v.UINT32 |= 0xFF000000;
+	
+		chn1 = ((float)raw_v.INT32) * 9.7656e-4f;
+	
+		llength = sprintf(sendbuf,"%.3f\r\n", chn1);
+		ble_nus_data_send(&m_nus, (uint8_t *)sendbuf, &llength, m_conn_handle);
 	
 }
 
@@ -638,6 +644,8 @@ int main(void)
 		nrf_gpio_cfg_output(15);
 		nrf_gpio_pin_set(15);
 		ads_begin(0x40);
+		
+		APP_ERROR_CHECK(sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, m_advertising.adv_handle, 4)); 
 	
     advertising_start();
 		

@@ -70,7 +70,7 @@ void twi_init(void)
 	ret_code_t err_code;
 
 	const nrf_drv_twi_config_t twi_afe_config = {
-		.scl = 5,
+		.scl = 8,
 		.sda = 6,
 		.frequency = NRF_DRV_TWI_FREQ_100K,
 		.interrupt_priority = APP_IRQ_PRIORITY_HIGH,
@@ -103,7 +103,7 @@ ADS122C04Reg_t ADS122C04_Reg; // Global to hold copies of all four configuration
 bool ADS122C04_writeReg(uint8_t reg, uint8_t writeValue); // write a value to the selected register
 bool ADS122C04_readReg(uint8_t reg, uint8_t *readValue); // read a value from the selected register (returned in readValue)
 
-bool ADS122C04_getConversionData(uint32_t *conversionData); // read the raw 24-bit conversion result
+//bool ADS122C04_getConversionData(uint32_t *conversionData); // read the raw 24-bit conversion result
 bool ADS122C04_getConversionDataWithCount(uint32_t *conversionData, uint8_t *count); // read the raw conversion result and count (if enabled)
 
 bool ADS122C04_sendCommand(uint8_t command); // write to the selected command register
@@ -123,20 +123,22 @@ bool ads_begin(uint8_t deviceAddress)
 	ads_enablePGA(ADS122C04_PGA_DISABLED);
 	ads_setDataRate(ADS122C04_DATA_RATE_330SPS);
 	ads_setOperatingMode(ADS122C04_OP_MODE_TURBO);
-	ads_setConversionMode(ADS122C04_CONVERSION_MODE_SINGLE_SHOT);
-	ads_setVoltageReference(ADS122C04_VREF_EXT_REF_PINS);
+	ads_setConversionMode(ADS122C04_CONVERSION_MODE_CONTINUOUS);
+	ads_setVoltageReference(ADS122C04_VREF_INTERNAL);
 	ads_enableInternalTempSensor(ADS122C04_TEMP_SENSOR_OFF);
 	ads_setDataCounter(ADS122C04_DCNT_DISABLE);
 	ads_setDataIntegrityCheck(ADS122C04_CRC_DISABLED);
 	ads_setBurnOutCurrent(ADS122C04_BURN_OUT_CURRENT_OFF);
-	ads_setIDACcurrent(ADS122C04_IDAC_CURRENT_500_UA);
+	ads_setIDACcurrent(ADS122C04_IDAC_CURRENT_250_UA);
 	
 	ads_setInputMultiplexer(ADS122C04_MUX_AIN0_AIN1);
 	ads_setGain(ADS122C04_GAIN_1);
-	ads_setIDAC1mux(ADS122C04_IDAC1_REFP);
+	ads_setIDAC1mux(ADS122C04_IDAC1_AIN0);
 	ads_setIDAC2mux(ADS122C04_IDAC2_DISABLED);
 	
 	ads_printADS122C04config();
+	
+	ads_start();
 
   return true; // Default to using 'safe' settings (disable the IDAC current sources)
 }
@@ -570,7 +572,7 @@ bool ADS122C04_getConversionData(uint32_t *conversionData)
 	APP_ERROR_CHECK(err_code);
 	while (m_xfer_done == false) nrf_pwr_mgmt_run();
 	
-	NRF_LOG_INFO("%x,%x,%x",iic_recvbuf[2],iic_recvbuf[1],iic_recvbuf[0])
+	//NRF_LOG_INFO("%x,%x,%x",iic_recvbuf[2],iic_recvbuf[1],iic_recvbuf[0])
 
   *conversionData = ((uint32_t)iic_recvbuf[2]) | ((uint32_t)iic_recvbuf[1]<<8) | ((uint32_t)iic_recvbuf[0]<<16);
   return(true);
