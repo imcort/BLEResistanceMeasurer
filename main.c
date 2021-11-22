@@ -195,7 +195,7 @@ static void m_sample_timer_handler(void *p_context)
     
     float volt = ads_readRawVoltage();
     
-    float res = 6296.0f * volt * volt + 6446.0f * volt + 202.1;
+    float res = 6296.0f * volt * volt + 6446.0f * volt + 202.1f;
     res = res / 2.0f;
     char sendbuf[200];
     uint16_t len = sprintf(sendbuf,"%.3f\r\n", res);
